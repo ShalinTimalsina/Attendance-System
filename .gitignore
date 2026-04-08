@@ -1,0 +1,21 @@
+.env
+
+__pycache__/
+*.py[cod]
+*.sqlite3
+.DS_Store
+
+# Python
+backend/.venv/
+backend/.pytest_cache/
+backend/.mypy_cache/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# IDE
+.idea/
+.vscode/*.code-workspace
+
+AI_HANDOFF_CONTEXT.md
