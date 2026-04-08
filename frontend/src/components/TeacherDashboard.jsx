@@ -13,11 +13,7 @@ function TeacherDashboard() {
     const [clock, setClock] = useState(Date.now());
     const [sessionType, setSessionType] = useState("lecture");
     const [durationMinutes, setDurationMinutes] = useState(2);
-    const [courseCode, setCourseCode] = useState("");
-    const [courseTitle, setCourseTitle] = useState("");
-    const [audienceLabel, setAudienceLabel] = useState("");
     const [targetSections, setTargetSections] = useState("");
-    const [topic, setTopic] = useState("");
     const [notes, setNotes] = useState("");
 
     const sessionSecondsLeft = useMemo(() => {
@@ -119,11 +115,7 @@ function TeacherDashboard() {
         const payload = {
             duration_minutes: Number(durationMinutes),
             session_type: sessionType,
-            course_code: courseCode.trim() || null,
-            course_title: courseTitle.trim() || null,
-            audience_label: audienceLabel.trim() || null,
             target_sections: targetSections.trim() || null,
-            topic: topic.trim() || null,
             notes: notes.trim() || null,
         };
 
@@ -174,7 +166,7 @@ function TeacherDashboard() {
             <section className="card">
                 <h2>Teacher Control Panel</h2>
                 <p className="muted-text">
-                    Configure class details, select session mode, and target sections before starting attendance.
+                    Select session type and duration, then optionally add section and notes before starting attendance.
                 </p>
 
                 <form className="stack-form teacher-session-form" onSubmit={startSession}>
@@ -182,7 +174,6 @@ function TeacherDashboard() {
                         <label>
                             Session Type
                             <select value={sessionType} onChange={(e) => setSessionType(e.target.value)}>
-                                <option value="solo">Solo</option>
                                 <option value="lecture">Lecture</option>
                                 <option value="tutorial">Tutorial</option>
                                 <option value="practical">Practical</option>
@@ -202,50 +193,14 @@ function TeacherDashboard() {
                         </label>
 
                         <label>
-                            Course Code
-                            <input
-                                value={courseCode}
-                                onChange={(e) => setCourseCode(e.target.value)}
-                                placeholder="e.g. CS201"
-                            />
-                        </label>
-
-                        <label>
-                            Course Title
-                            <input
-                                value={courseTitle}
-                                onChange={(e) => setCourseTitle(e.target.value)}
-                                placeholder="e.g. Data Structures"
-                            />
-                        </label>
-
-                        <label>
-                            Audience Label
-                            <input
-                                value={audienceLabel}
-                                onChange={(e) => setAudienceLabel(e.target.value)}
-                                placeholder="e.g. Group 1 or A10"
-                            />
-                        </label>
-
-                        <label>
-                            Target Sections
+                            Section (optional)
                             <input
                                 value={targetSections}
                                 onChange={(e) => setTargetSections(e.target.value)}
-                                placeholder="e.g. A10,A11,A12"
+                                placeholder="e.g. A10 or A10,A11"
                             />
                         </label>
                     </div>
-
-                    <label>
-                        Topic
-                        <input
-                            value={topic}
-                            onChange={(e) => setTopic(e.target.value)}
-                            placeholder="e.g. Week 4 - Trees"
-                        />
-                    </label>
 
                     <label>
                         Notes (optional)
@@ -284,26 +239,15 @@ function TeacherDashboard() {
                         <p>
                             <strong>QR token TTL:</strong> {qrExpiresIn}s
                         </p>
-
-                        {(session.course_code || session.course_title || session.session_type) && (
+                        {session.session_type ? (
                             <p>
-                                <strong>Class:</strong> {session.course_code || "-"}
-                                {session.course_title ? ` — ${session.course_title}` : ""} ({session.session_type || "-"})
-                            </p>
-                        )}
-                        {session.audience_label ? (
-                            <p>
-                                <strong>Audience:</strong> {session.audience_label}
+                                <strong>Session Type:</strong> {session.session_type}
                             </p>
                         ) : null}
+
                         {session.target_sections ? (
                             <p>
-                                <strong>Target Sections:</strong> {session.target_sections}
-                            </p>
-                        ) : null}
-                        {session.topic ? (
-                            <p>
-                                <strong>Topic:</strong> {session.topic}
+                                <strong>Section:</strong> {session.target_sections}
                             </p>
                         ) : null}
                         {session.notes ? (

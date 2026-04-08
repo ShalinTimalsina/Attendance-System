@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Body, Depends, Request
 from sqlalchemy.orm import Session
 
+from app.core.client_ip import extract_client_ip
 from app.core.config import settings
 from app.core.database import get_db
 from app.dependencies.auth import require_roles
@@ -33,7 +34,7 @@ def start_session(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(UserRole.teacher)),
 ) -> SessionResponse:
-    teacher_ip = request.client.host if request.client else None
+    teacher_ip = extract_client_ip(request)
     request_payload = payload or SessionCreateRequest(duration_minutes=settings.session_ttl_minutes)
     session_obj = SessionService.create_session(db, current_user.id, teacher_ip, request_payload)
     return build_session_response(session_obj)

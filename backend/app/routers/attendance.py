@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.orm import Session
 
+from app.core.client_ip import extract_client_ip
 from app.core.database import get_db
 from app.dependencies.auth import require_roles
 from app.models.user import User, UserRole
@@ -18,7 +19,7 @@ def scan_qr_and_mark_attendance(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(UserRole.student)),
 ) -> AttendanceResponse:
-    client_ip = request.client.host if request.client else None
+    client_ip = extract_client_ip(request)
     attendance = AttendanceService.mark_attendance(
         db=db,
         student=current_user,

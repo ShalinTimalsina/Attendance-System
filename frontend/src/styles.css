@@ -257,6 +257,22 @@ td {
     margin-top: 0.5rem;
 }
 
+.status-banner {
+    margin: 0.65rem 0;
+    padding: 0.65rem 0.75rem;
+    border-radius: 8px;
+}
+
+.error-text.status-banner {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+}
+
+.success-text.status-banner {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+}
+
 @media (max-width: 900px) {
     .dashboard-grid {
         grid-template-columns: 1fr;
@@ -305,5 +321,9 @@ td {
     .row-actions button,
     .row-actions .inline-check {
         width: 100%;
+    }
+
+    .status-banner {
+        font-size: 0.95rem;
     }
 }

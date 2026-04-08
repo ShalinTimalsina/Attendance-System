@@ -34,49 +34,73 @@ function QrScannerModal({ open, onClose, onScanned }) {
             const isSmallScreen = typeof window !== "undefined" && window.matchMedia("(max-width: 640px)").matches;
             const qrboxSize = isSmallScreen ? 220 : 260;
 
+            const scanConfig = { fps: 10, qrbox: { width: qrboxSize, height: qrboxSize }, aspectRatio: 1 };
+            const onScanSuccess = async (decodedText) => {
+                if (scanHandled) {
+                    return;
+                }
+                scanHandled = true;
+                setStatus("QR detected. Finalizing...");
+
+                try {
+                    await scanner.stop();
+                } catch {
+                    // no-op: some browsers can fail on rapid stop sequences
+                }
+
+                try {
+                    await scanner.clear();
+                } catch {
+                    // no-op: clear may fail if scanner already cleared
+                }
+
+                if (!isUnmounted) {
+                    onScanned(decodedText);
+                    onClose();
+                }
+            };
+
+            const onScanFailure = () => {
+                if (!isUnmounted) {
+                    setStatus("Scanning...");
+                }
+            };
+
             try {
-                await scanner.start(
-                    { facingMode: "environment" },
-                    { fps: 10, qrbox: { width: qrboxSize, height: qrboxSize }, aspectRatio: 1 },
-                    async (decodedText) => {
-                        if (scanHandled) {
-                            return;
-                        }
-                        scanHandled = true;
-                        setStatus("QR detected. Finalizing...");
-
-                        try {
-                            await scanner.stop();
-                        } catch {
-                            // no-op: some browsers can fail on rapid stop sequences
-                        }
-
-                        try {
-                            await scanner.clear();
-                        } catch {
-                            // no-op: clear may fail if scanner already cleared
-                        }
-
-                        if (!isUnmounted) {
-                            onScanned(decodedText);
-                            onClose();
-                        }
-                    },
-                    () => {
-                        if (!isUnmounted) {
-                            setStatus("Scanning...");
-                        }
-                    }
-                );
+                // First try: environment/back camera hint.
+                await scanner.start({ facingMode: { ideal: "environment" } }, scanConfig, onScanSuccess, onScanFailure);
 
                 if (!isUnmounted) {
                     setStatus("Scanning...");
                 }
-            } catch (error) {
-                if (isUnmounted) {
-                    return;
+            } catch (firstError) {
+                try {
+                    // Fallback for mobile browsers that ignore facingMode.
+                    const cameras = await Html5Qrcode.getCameras();
+                    if (!cameras?.length) {
+                        throw firstError;
+                    }
+
+                    const backCamera = cameras.find((cam) => /back|rear|environment/i.test(cam.label || ""));
+                    const selected = backCamera || cameras[cameras.length - 1];
+
+                    setStatus("Camera ready. Starting scanner...");
+                    await scanner.start({ deviceId: { exact: selected.id } }, scanConfig, onScanSuccess, onScanFailure);
+
+                    if (!isUnmounted) {
+                        setStatus("Scanning...");
+                    }
+                } catch (fallbackError) {
+                    if (isUnmounted) {
+                        return;
+                    }
+
+                    const detail = fallbackError?.message || firstError?.message;
+                    setStatus(
+                        detail ||
+                        "Unable to access camera. Ensure camera permission is allowed and try refreshing the page."
+                    );
                 }
-                setStatus(error?.message || "Unable to access camera. Check browser permission and device camera.");
             }
         };
 

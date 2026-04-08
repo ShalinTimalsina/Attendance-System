@@ -13,6 +13,22 @@ function StudentDashboard() {
     const [scannerOpen, setScannerOpen] = useState(false);
     const [autoSubmitAfterScan, setAutoSubmitAfterScan] = useState(true);
 
+    const parseAttendanceError = (err) => {
+        const detail = err?.response?.data?.detail || "Unable to mark attendance";
+
+        if (detail === "Student already marked present") {
+            return "Attendance already marked for this session. No need to scan again. ✅";
+        }
+        if (detail === "Device ID mismatch") {
+            return "This account is linked to a different device ID. Use your original device ID.";
+        }
+        if (detail === "QR token expired") {
+            return "QR expired. Ask your teacher to keep the QR open and scan again quickly.";
+        }
+
+        return detail;
+    };
+
     const attendancePercentage = useMemo(() => {
         if (!stats) {
             return "0.00";
@@ -34,6 +50,16 @@ function StudentDashboard() {
     }, []);
 
     const markAttendance = async (token) => {
+        if (busy) {
+            return;
+        }
+
+        if (!deviceId.trim() || deviceId.trim().length < 3) {
+            setError("Enter a valid device ID (at least 3 characters) before submitting attendance.");
+            setMessage("");
+            return;
+        }
+
         setBusy(true);
         setError("");
         setMessage("");
@@ -41,14 +67,14 @@ function StudentDashboard() {
         try {
             await api.post("/attendance/scan", {
                 qr_token: token,
-                device_id: deviceId,
+                device_id: deviceId.trim(),
             });
-            localStorage.setItem("device_id", deviceId);
-            setMessage("Attendance marked successfully. Nice punctuality! ✨");
+            localStorage.setItem("device_id", deviceId.trim());
+            setMessage("Attendance marked successfully. Thank you! ✅");
             setQrToken("");
             await loadStats();
         } catch (err) {
-            setError(err?.response?.data?.detail || "Unable to mark attendance");
+            setError(parseAttendanceError(err));
         } finally {
             setBusy(false);
         }
@@ -60,11 +86,20 @@ function StudentDashboard() {
     };
 
     const handleScanned = async (decodedText) => {
+        setError("");
         setQrToken(decodedText);
 
         if (autoSubmitAfterScan && deviceId.trim().length >= 3) {
             await markAttendance(decodedText);
+            return;
         }
+
+        if (autoSubmitAfterScan && deviceId.trim().length < 3) {
+            setError("QR captured, but device ID is missing. Enter device ID and tap Mark Attendance.");
+            return;
+        }
+
+        setMessage("QR captured successfully. Tap Mark Attendance to submit.");
     };
 
     return (
@@ -74,6 +109,9 @@ function StudentDashboard() {
                 <p className="muted-text">
                     Scan the live QR from your teacher, then submit the decoded token below.
                 </p>
+
+                {error ? <p className="error-text status-banner">{error}</p> : null}
+                {message ? <p className="success-text status-banner">{message}</p> : null}
 
                 <div className="row-actions">
                     <button type="button" onClick={() => setScannerOpen(true)} disabled={busy}>
@@ -102,6 +140,10 @@ function StudentDashboard() {
                         />
                     </label>
 
+                    <p className="muted-text">
+                        Tip: keep the same device ID every time to avoid device mismatch errors.
+                    </p>
+
                     <label>
                         QR Token (manual fallback)
                         <textarea
@@ -117,9 +159,6 @@ function StudentDashboard() {
                         {busy ? "Submitting..." : "Mark Attendance"}
                     </button>
                 </form>
-
-                {error ? <p className="error-text">{error}</p> : null}
-                {message ? <p className="success-text">{message}</p> : null}
             </section>
 
             <section className="card">
