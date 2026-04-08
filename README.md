@@ -141,15 +141,52 @@ Demo credentials:
 
 1. **Clone repo to EC2** (one-time setup)
 2. Install Docker and Docker Compose on EC2
-3. Create `.env` from `.env.example` on EC2 and update public-IP-based URLs
+3. Create `.env` from `.env.example` on EC2 and set the production values for your domain
 4. Add GitHub secrets:
    - `SSH_HOST`
    - `SSH_PRIVATE_KEY`
 5. Configure EC2 security group:
    - `22` (SSH, restricted)
-   - `5173` (frontend)
-   - `8000` (backend)
+  - `80` (HTTP for Let's Encrypt)
+  - `443` (HTTPS)
    - Keep `5432` and `6379` closed publicly
+
+### Domain + SSL setup
+
+Your production domain is:
+
+- `attendance.shalintimalsina.com.np`
+
+Use the production compose file:
+
+```bash
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+For first-time Let's Encrypt issuance, make sure port 80 is open and run:
+
+```bash
+sudo certbot certonly --standalone \
+  -d attendance.shalintimalsina.com.np \
+  --non-interactive \
+  --agree-tos \
+  -m you@example.com
+```
+
+Then set these in EC2 `.env`:
+
+```env
+PUBLIC_HOST=attendance.shalintimalsina.com.np
+LETSENCRYPT_EMAIL=you@example.com
+FRONTEND_ORIGIN_PROD=https://attendance.shalintimalsina.com.np
+VITE_API_BASE_URL_PROD=https://attendance.shalintimalsina.com.np/api
+```
+
+Cloudflare note:
+
+- Point the DNS record to the EC2 public IP
+- If issuance fails, temporarily switch the record to **DNS only** while certbot runs
+- After the certificate is installed, you can keep Cloudflare proxy enabled if you want
 
 ### Deploy
 
