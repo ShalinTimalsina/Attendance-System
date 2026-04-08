@@ -77,6 +77,38 @@ function TeacherDashboard() {
         };
     }, [session]);
 
+    useEffect(() => {
+        if (!session || !sessionIsActive) {
+            return undefined;
+        }
+
+        let active = true;
+
+        const loadAttendanceLive = async () => {
+            try {
+                const { data } = await api.get(`/sessions/${session.id}/attendance`);
+                if (!active) {
+                    return;
+                }
+                setAttendance(data);
+            } catch (err) {
+                if (!active) {
+                    return;
+                }
+                const detail = err?.response?.data?.detail || "Unable to fetch attendance list";
+                setError(detail);
+            }
+        };
+
+        loadAttendanceLive();
+        const interval = setInterval(loadAttendanceLive, 3000);
+
+        return () => {
+            active = false;
+            clearInterval(interval);
+        };
+    }, [session, sessionIsActive]);
+
     const startSession = async (event) => {
         event.preventDefault();
         setError("");
@@ -98,6 +130,8 @@ function TeacherDashboard() {
         try {
             const { data } = await api.post("/sessions/start", payload);
             setSession(data);
+            const attendanceResponse = await api.get(`/sessions/${data.id}/attendance`);
+            setAttendance(attendanceResponse.data);
             setMessage("Session started. QR token refreshes automatically every few seconds.");
         } catch (err) {
             setError(err?.response?.data?.detail || "Unable to start session");
