@@ -3,8 +3,15 @@ import { useEffect, useRef, useState } from "react";
 function QrScannerModal({ open, onClose, onScanned }) {
     const regionIdRef = useRef(`qr-reader-${Math.random().toString(16).slice(2)}`);
     const scannerRef = useRef(null);
+    const onCloseRef = useRef(onClose);
+    const onScannedRef = useRef(onScanned);
     const [status, setStatus] = useState("");
     const [retryTick, setRetryTick] = useState(0);
+
+    useEffect(() => {
+        onCloseRef.current = onClose;
+        onScannedRef.current = onScanned;
+    }, [onClose, onScanned]);
 
     useEffect(() => {
         if (!open) {
@@ -44,21 +51,9 @@ function QrScannerModal({ open, onClose, onScanned }) {
                 scanHandled = true;
                 setStatus("QR detected. Finalizing...");
 
-                try {
-                    await scanner.stop();
-                } catch {
-                    // no-op: some browsers can fail on rapid stop sequences
-                }
-
-                try {
-                    await scanner.clear();
-                } catch {
-                    // no-op: clear may fail if scanner already cleared
-                }
-
                 if (!isUnmounted) {
-                    onScanned(decodedText);
-                    onClose();
+                    onCloseRef.current();
+                    void onScannedRef.current(decodedText);
                 }
             };
 
@@ -125,7 +120,7 @@ function QrScannerModal({ open, onClose, onScanned }) {
                 });
             }
         };
-    }, [open, onClose, onScanned, retryTick]);
+    }, [open, retryTick]);
 
     if (!open) {
         return null;
@@ -133,23 +128,24 @@ function QrScannerModal({ open, onClose, onScanned }) {
 
     return (
         <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="QR Scanner">
-            <div className="modal-card">
-                <div className="modal-header">
+            <div className="modal-card scanner-modal-card">
+                <div className="modal-header scanner-topbar">
                     <h3>Scan Attendance QR</h3>
-                    <div className="teacher-actions-row">
-                        <button type="button" className="secondary-btn" onClick={() => setRetryTick((v) => v + 1)}>
-                            Retry Camera
-                        </button>
-                        <button type="button" className="secondary-btn" onClick={onClose}>
-                            Close
-                        </button>
-                    </div>
+                    <button type="button" className="secondary-btn" onClick={onClose}>
+                        Close
+                    </button>
                 </div>
 
-                <p className="muted-text">{status}</p>
+                <p className="muted-text scanner-status">{status || "Preparing scanner..."}</p>
 
-                <div className="qr-reader-wrap">
+                <div className="qr-reader-wrap scanner-view">
                     <div id={regionIdRef.current} />
+                </div>
+
+                <div className="scanner-actions">
+                    <button type="button" className="secondary-btn scanner-retry" onClick={() => setRetryTick((v) => v + 1)}>
+                        Retry Camera
+                    </button>
                 </div>
             </div>
         </div>

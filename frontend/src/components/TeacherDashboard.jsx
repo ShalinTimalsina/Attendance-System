@@ -11,6 +11,7 @@ function TeacherDashboard() {
     const [message, setMessage] = useState("");
     const [error, setError] = useState("");
     const [clock, setClock] = useState(Date.now());
+    const [lastAttendanceSync, setLastAttendanceSync] = useState(null);
     const [sessionType, setSessionType] = useState("lecture");
     const [durationMinutes, setDurationMinutes] = useState(2);
     const [targetSections, setTargetSections] = useState("");
@@ -87,12 +88,12 @@ function TeacherDashboard() {
                     return;
                 }
                 setAttendance(data);
+                setLastAttendanceSync(Date.now());
             } catch (err) {
                 if (!active) {
                     return;
                 }
-                const detail = err?.response?.data?.detail || "Unable to fetch attendance list";
-                setError(detail);
+                // Keep live polling silent to avoid noisy UX while network fluctuates.
             }
         };
 
@@ -124,6 +125,7 @@ function TeacherDashboard() {
             setSession(data);
             const attendanceResponse = await api.get(`/sessions/${data.id}/attendance`);
             setAttendance(attendanceResponse.data);
+            setLastAttendanceSync(Date.now());
             setMessage("Session started. QR token refreshes automatically every few seconds.");
         } catch (err) {
             setError(err?.response?.data?.detail || "Unable to start session");
@@ -156,6 +158,7 @@ function TeacherDashboard() {
         try {
             const { data } = await api.get(`/sessions/${session.id}/attendance`);
             setAttendance(data);
+            setLastAttendanceSync(Date.now());
         } catch (err) {
             setError(err?.response?.data?.detail || "Unable to fetch attendance list");
         }
@@ -168,6 +171,24 @@ function TeacherDashboard() {
                 <p className="muted-text">
                     Select session type and duration, then optionally add section and notes before starting attendance.
                 </p>
+
+                {sessionIsActive && qrToken ? (
+                    <div className="teacher-live-qr">
+                        <div className="teacher-live-qr-code">
+                            <QRCodeCanvas value={qrToken} size={160} includeMargin />
+                        </div>
+                        <div className="teacher-live-qr-meta">
+                            <p>
+                                <strong>Live QR Ready</strong>
+                            </p>
+                            <p className="muted-text">
+                                Session #{session?.id} · {sessionSecondsLeft}s left · token refresh {qrExpiresIn}s
+                            </p>
+                            <p className="muted-text">Students can scan directly from this QR.</p>
+                            <textarea readOnly value={qrToken} rows={3} />
+                        </div>
+                    </div>
+                ) : null}
 
                 <form className="stack-form teacher-session-form" onSubmit={startSession}>
                     <div className="session-form-grid">
@@ -255,18 +276,6 @@ function TeacherDashboard() {
                                 <strong>Notes:</strong> {session.notes}
                             </p>
                         ) : null}
-
-                        {sessionIsActive && qrToken ? (
-                            <div className="qr-wrapper">
-                                <QRCodeCanvas value={qrToken} size={220} includeMargin />
-                                <p className="muted-text">If camera scan is unavailable, copy this token manually:</p>
-                                <textarea readOnly value={qrToken} rows={4} />
-                            </div>
-                        ) : <p className="muted-text">QR is unavailable for inactive/expired sessions.</p>}
-
-                        <button className="secondary-btn" onClick={refreshAttendance}>
-                            Refresh attendance list
-                        </button>
                     </div>
                 ) : (
                     <p className="muted-text">No active session yet.</p>
@@ -278,6 +287,12 @@ function TeacherDashboard() {
 
             <section className="card">
                 <h2>Attendance List</h2>
+                <p className="muted-text">
+                    {sessionIsActive
+                        ? `Live updates every 3 seconds${lastAttendanceSync ? ` · Last sync ${new Date(lastAttendanceSync).toLocaleTimeString()}` : ""
+                        }`
+                        : "Start a session to receive live attendance updates."}
+                </p>
                 {attendance.length === 0 ? (
                     <p className="muted-text">No students marked yet.</p>
                 ) : (
@@ -306,6 +321,10 @@ function TeacherDashboard() {
                         </table>
                     </div>
                 )}
+
+                <button className="secondary-btn" onClick={refreshAttendance}>
+                    Refresh now (optional)
+                </button>
             </section>
         </div>
     );
