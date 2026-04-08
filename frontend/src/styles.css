@@ -240,10 +240,21 @@ td {
     border-radius: 12px;
     padding: 0.75rem;
     background: #f8fafc;
+    overflow: hidden;
 }
 
 .qr-reader-wrap #qr-shaded-region {
     border-radius: 8px;
+}
+
+.qr-reader-wrap video,
+.qr-reader-wrap canvas {
+    width: 100% !important;
+    height: auto !important;
+}
+
+.scanner-help {
+    margin-top: 0.5rem;
 }
 
 @media (max-width: 900px) {
@@ -253,5 +264,46 @@ td {
 
     .session-form-grid {
         grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .modal-backdrop {
+        align-items: flex-start;
+        padding: 0;
+    }
+
+    .modal-card {
+        width: 100%;
+        min-height: 100dvh;
+        border-radius: 0;
+        padding: 1rem 0.9rem 1.25rem;
+    }
+
+    .modal-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .modal-header button {
+        align-self: flex-start;
+    }
+
+    .qr-reader-wrap {
+        padding: 0.5rem;
+    }
+
+    .row-actions {
+        align-items: flex-start;
+    }
+
+    .teacher-actions-row {
+        flex-direction: column;
+    }
+
+    .teacher-actions-row button,
+    .row-actions button,
+    .row-actions .inline-check {
+        width: 100%;
     }
 }

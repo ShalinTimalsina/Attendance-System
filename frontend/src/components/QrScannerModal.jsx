@@ -14,6 +14,16 @@ function QrScannerModal({ open, onClose, onScanned }) {
         let scanHandled = false;
 
         const startScanner = async () => {
+            if (typeof window !== "undefined" && !window.isSecureContext) {
+                setStatus("Camera access requires HTTPS (or localhost). Open this site with a secure URL to scan on mobile.");
+                return;
+            }
+
+            if (!navigator?.mediaDevices?.getUserMedia) {
+                setStatus("This browser does not support camera access.");
+                return;
+            }
+
             setStatus("Requesting camera permission...");
 
             const { Html5Qrcode } = await import("html5-qrcode");
@@ -21,10 +31,13 @@ function QrScannerModal({ open, onClose, onScanned }) {
             const scanner = new Html5Qrcode(regionIdRef.current);
             scannerRef.current = scanner;
 
+            const isSmallScreen = typeof window !== "undefined" && window.matchMedia("(max-width: 640px)").matches;
+            const qrboxSize = isSmallScreen ? 220 : 260;
+
             try {
                 await scanner.start(
                     { facingMode: "environment" },
-                    { fps: 10, qrbox: { width: 260, height: 260 } },
+                    { fps: 10, qrbox: { width: qrboxSize, height: qrboxSize }, aspectRatio: 1 },
                     async (decodedText) => {
                         if (scanHandled) {
                             return;
@@ -102,7 +115,13 @@ function QrScannerModal({ open, onClose, onScanned }) {
                     <div id={regionIdRef.current} />
                 </div>
 
-                <p className="muted-text">Tip: allow camera permission when prompted by the browser.</p>
+                <div className="scanner-help">
+                    <p className="muted-text">Tip: allow camera permission when prompted by the browser.</p>
+                    <p className="muted-text">
+                        On mobile, camera access usually requires HTTPS. If you opened the site using a plain
+                        public IP over HTTP, the browser may block the camera.
+                    </p>
+                </div>
             </div>
         </div>
     );
